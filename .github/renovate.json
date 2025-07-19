@@ -5,7 +5,8 @@
     "github>Cyb3r-Jak3/renovate-configs//my-registry.json"
   ],
   "postUpdateOptions": ["gomodTidy", "gomodUpdateImportPaths"],
-  "lockFilesMaintenance": {
-    "enabled": true
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 5am on the first day of the month"]
   }
 }
