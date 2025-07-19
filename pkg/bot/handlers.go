@@ -6,9 +6,10 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/Cyb3r-Jak3/common/v5"
+
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
-	"github.com/disgoorg/json"
 
 	"github.com/disgoorg/disgolink/v3/disgolink"
 	"github.com/disgoorg/disgolink/v3/lavalink"
@@ -365,30 +366,30 @@ func (b *Bot) play(event *events.ApplicationCommandInteractionCreate, data disco
 	b.Lavalink.BestNode().LoadTracksHandler(ctx, identifier, disgolink.NewResultHandler(
 		func(track lavalink.Track) {
 			_, _ = b.Client.Rest().UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
-				Content: json.Ptr(fmt.Sprintf("Loaded track: [`%s`](<%s>)", track.Info.Title, *track.Info.URI)),
+				Content: common.Ptr(fmt.Sprintf("Loaded track: [`%s`](<%s>)", track.Info.Title, *track.Info.URI)),
 			})
 			toPlay = &track
 		},
 		func(playlist lavalink.Playlist) {
 			_, _ = b.Client.Rest().UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
-				Content: json.Ptr(fmt.Sprintf("Loaded playlist: `%s` with `%d` tracks", playlist.Info.Name, len(playlist.Tracks))),
+				Content: common.Ptr(fmt.Sprintf("Loaded playlist: `%s` with `%d` tracks", playlist.Info.Name, len(playlist.Tracks))),
 			})
 			toPlay = &playlist.Tracks[0]
 		},
 		func(tracks []lavalink.Track) {
 			_, _ = b.Client.Rest().UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
-				Content: json.Ptr(fmt.Sprintf("Loaded search result: [`%s`](<%s>)", tracks[0].Info.Title, *tracks[0].Info.URI)),
+				Content: common.Ptr(fmt.Sprintf("Loaded search result: [`%s`](<%s>)", tracks[0].Info.Title, *tracks[0].Info.URI)),
 			})
 			toPlay = &tracks[0]
 		},
 		func() {
 			_, _ = b.Client.Rest().UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
-				Content: json.Ptr(fmt.Sprintf("Nothing found for: `%s`", identifier)),
+				Content: common.Ptr(fmt.Sprintf("Nothing found for: `%s`", identifier)),
 			})
 		},
 		func(err error) {
 			_, _ = b.Client.Rest().UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
-				Content: json.Ptr(fmt.Sprintf("Error while looking up query: `%s`", err)),
+				Content: common.Ptr(fmt.Sprintf("Error while looking up query: `%s`", err)),
 			})
 		},
 	))
