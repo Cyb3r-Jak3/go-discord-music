@@ -1,0 +1,195 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: go-discord-music
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    goos:
+      - linux
+      - windows
+      - darwin
+      - freebsd
+      - openbsd
+    goarch:
+      - amd64
+      - arm
+      - arm64
+      - '386'
+      - s390x
+      - ppc64le
+      - riscv64
+      - mips64
+      - mips64le
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    ldflags:
+      - -s -w
+      - -X 'go-discord-music/pkg/version.Version={{.Version}}'
+      - -X 'go-discord-music/pkg/version.Commit={{.Commit}}'
+      - -X 'go-discord-music/pkg/version.Date={{.Date}}'
+      - -extldflags "-static"
+
+archives:
+  - formats: ['tar.xz']
+    files:
+        - README.md
+    format_overrides:
+      - goos: windows
+        formats: ['zip']
+    name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ .Version }}-snapshot-{{ .ShortCommit }}"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+
+signs:
+  - artifacts: all
+    args:
+      - "--batch"
+      - "--local-user"
+      - "{{ .Env.GPG_FINGERPRINT }}"
+      - "--output"
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"
+
+sboms:
+  - artifacts: archive
+
+release:
+  draft: true
+  footer: >-
+    ---
+
+    Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
+
+blobs:
+  - provider: s3
+    region: auto
+    endpoint: https://8be772befd147a8df540aae0fa15c047.r2.cloudflarestorage.com
+    bucket: public-files
+
+#announce:
+#  bluesky:
+#    enabled: true
+#    username: releases.cyberjake.xyz
+
+dockers:
+  - id: go-discord-music-linux-amd64
+    goos: linux
+    goarch: amd64
+    use: buildx
+    image_templates:
+      - "cyb3rjak3/go-discord-music:latest-amd64"
+      - "cyb3rjak3/go-discord-music:{{ .Tag }}-amd64"
+      - "cyb3rjak3/go-discord-music:v{{ .Major }}-amd64"
+      - "ghcr.io/cyb3r-jak3/go-discord-music:latest-amd64"
+      - "ghcr.io/cyb3r-jak3/go-discord-music:{{ .Tag }}-amd64"
+      - "ghcr.io/cyb3r-jak3/go-discord-music:v{{ .Major }}-amd64"
+
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--platform=linux/amd64"
+
+  - id: go-discord-music-linux-arm64
+    goos: linux
+    goarch: arm64
+    use: buildx
+    image_templates:
+      - "cyb3rjak3/go-discord-music:latest-arm64"
+      - "cyb3rjak3/go-discord-music:{{ .Tag }}-arm64"
+      - "cyb3rjak3/go-discord-music:v{{ .Major }}-arm64"
+      - "ghcr.io/cyb3r-jak3/go-discord-music:latest-arm64"
+      - "ghcr.io/cyb3r-jak3/go-discord-music:{{ .Tag }}-arm64"
+      - "ghcr.io/cyb3r-jak3/go-discord-music:v{{ .Major }}-arm64"
+
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--platform=linux/arm64"
+
+  - id: go-discord-music-linux-arm
+    goos: linux
+    goarch: arm
+    use: buildx
+    image_templates:
+      - "cyb3rjak3/go-discord-music:latest-arm"
+      - "cyb3rjak3/go-discord-music:{{ .Tag }}-arm"
+      - "cyb3rjak3/go-discord-music:v{{ .Major }}-arm"
+      - "ghcr.io/cyb3r-jak3/go-discord-music:latest-arm"
+      - "ghcr.io/cyb3r-jak3/go-discord-music:{{ .Tag }}-arm"
+      - "ghcr.io/cyb3r-jak3/go-discord-music:v{{ .Major }}-arm"
+
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--platform=linux/arm"
+
+docker_manifests:
+  - id: docker-latest
+    name_template: "cyb3rjak3/go-discord-music:latest"
+    image_templates:
+      - "cyb3rjak3/go-discord-music:latest-amd64"
+      - "cyb3rjak3/go-discord-music:latest-arm64"
+      - "cyb3rjak3/go-discord-music:latest-arm"
+  - id: docker-major
+    name_template: "cyb3rjak3/go-discord-music:v{{ .Major }}"
+    image_templates:
+      - "cyb3rjak3/go-discord-music:v{{ .Major }}-amd64"
+      - "cyb3rjak3/go-discord-music:v{{ .Major }}-arm64"
+      - "cyb3rjak3/go-discord-music:v{{ .Major }}-arm"
+  - id: docker-tag
+    name_template: "cyb3rjak3/go-discord-music:{{ .Tag }}"
+    image_templates:
+      - "cyb3rjak3/go-discord-music:{{ .Tag }}-amd64"
+      - "cyb3rjak3/go-discord-music:{{ .Tag }}-arm64"
+      - "cyb3rjak3/go-discord-music:{{ .Tag }}-arm"
+
+  - id: github-latest
+    name_template: "ghcr.io/cyb3r-jak3/go-discord-music:latest"
+    image_templates:
+      - "ghcr.io/cyb3r-jak3/go-discord-music:latest-amd64"
+      - "ghcr.io/cyb3r-jak3/go-discord-music:latest-arm64"
+      -  "ghcr.io/cyb3r-jak3/go-discord-music:latest-arm"
+
+  - id: github-major
+    name_template: "ghcr.io/cyb3r-jak3/go-discord-music:v{{ .Major }}"
+    image_templates:
+      - "ghcr.io/cyb3r-jak3/go-discord-music:v{{ .Major }}-amd64"
+      - "ghcr.io/cyb3r-jak3/go-discord-music:v{{ .Major }}-arm64"
+      - "ghcr.io/cyb3r-jak3/go-discord-music:v{{ .Major }}-arm"
+
+  - id: github-tag
+    name_template: "ghcr.io/cyb3r-jak3/go-discord-music:{{ .Tag }}"
+    image_templates:
+      - "ghcr.io/cyb3r-jak3/go-discord-music:{{ .Tag }}-amd64"
+      - "ghcr.io/cyb3r-jak3/go-discord-music:{{ .Tag }}-arm64"
+      - "ghcr.io/cyb3r-jak3/go-discord-music:{{ .Tag }}-arm"
