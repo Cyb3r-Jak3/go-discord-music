@@ -3,7 +3,7 @@ package bot
 import (
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
-	"github.com/disgoorg/json"
+	"github.com/disgoorg/json/v2"
 	"github.com/disgoorg/snowflake/v2"
 
 	"github.com/disgoorg/disgolink/v3/lavalink"
