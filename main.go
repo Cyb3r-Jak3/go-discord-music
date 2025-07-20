@@ -36,6 +36,16 @@ func buildApp() *cli.Command {
 				Usage:   "Discord bot token",
 				Sources: cli.EnvVars("DISCORD_TOKEN"),
 			},
+			&cli.StringFlag{
+				Name:    "lavalink_node",
+				Aliases: []string{"l"},
+				Usage:   "Lavalink node configuration in the format 'name:address:password'. Note that the address should include the protocol (http or https).",
+			},
+			&cli.BoolFlag{
+				Name:    "lavalink_singleton",
+				Aliases: []string{"s"},
+				Usage:   "Use a singleton Lavalink node. This will use a predefined node configuration.",
+			},
 		},
 		EnableShellCompletion: true,
 	}
