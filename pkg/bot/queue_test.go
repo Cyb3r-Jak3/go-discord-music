@@ -10,8 +10,8 @@ import (
 
 func Test_Queue_AddTracks_AppendsToQueue(t *testing.T) {
 	queue := &Queue{}
-	track1 := lavalink.Track{}
-	track2 := lavalink.Track{}
+	track1 := lavalink.Track{Encoded: "track1"}
+	track2 := lavalink.Track{Encoded: "track2"}
 
 	queue.Add(track1, track2)
 
@@ -22,8 +22,8 @@ func Test_Queue_AddTracks_AppendsToQueue(t *testing.T) {
 
 func Test_Queue_Next_ReturnsFirstTrackAndRemovesIt(t *testing.T) {
 	queue := &Queue{}
-	track1 := lavalink.Track{}
-	track2 := lavalink.Track{}
+	track1 := lavalink.Track{Encoded: "track1"}
+	track2 := lavalink.Track{Encoded: "track2"}
 	queue.Add(track1, track2)
 
 	track, ok := queue.Next()
@@ -45,9 +45,9 @@ func Test_Queue_Next_ReturnsFalseWhenEmpty(t *testing.T) {
 
 func Test_Queue_Skip_SkipsSpecifiedAmount(t *testing.T) {
 	queue := &Queue{}
-	track1 := lavalink.Track{}
-	track2 := lavalink.Track{}
-	track3 := lavalink.Track{}
+	track1 := lavalink.Track{Encoded: "track1"}
+	track2 := lavalink.Track{Encoded: "track2"}
+	track3 := lavalink.Track{Encoded: "track3"}
 	queue.Add(track1, track2, track3)
 
 	track, ok := queue.Skip(2)
@@ -69,8 +69,8 @@ func Test_Queue_Skip_ReturnsFalseWhenEmpty(t *testing.T) {
 
 func Test_Queue_Clear_RemovesAllTracks(t *testing.T) {
 	queue := &Queue{}
-	track1 := lavalink.Track{}
-	track2 := lavalink.Track{}
+	track1 := lavalink.Track{Encoded: "track1"}
+	track2 := lavalink.Track{Encoded: "track2"}
 	queue.Add(track1, track2)
 
 	queue.Clear()
