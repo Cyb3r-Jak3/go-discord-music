@@ -108,7 +108,7 @@ func Run(_ context.Context, c *cli.Command) error {
 	}
 	if c.Bool("lavalink_singleton") {
 		if nodeInfo != "" {
-			logger.Warnf("Lavalink node configuration detected as singleton node, ignoring --lavalink-singleton flag")
+			logger.Warnf("Lavalink node configuration with singleton node. Ignoring --lavalink-singleton flag")
 		} else {
 			logger.Info("Using default singleton Lavalink node configuration")
 			botOptions = append(botOptions, bot.WithLavaLinkSingleton())
