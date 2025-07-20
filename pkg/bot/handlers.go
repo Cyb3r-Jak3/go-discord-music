@@ -410,3 +410,9 @@ func (b *Bot) debug(event *events.ApplicationCommandInteractionCreate, _ discord
 		Content: "Command not implemented yet",
 	})
 }
+
+func (b *Bot) source(event *events.ApplicationCommandInteractionCreate, _ discord.SlashCommandInteractionData) error {
+	return event.CreateMessage(discord.MessageCreate{
+		Content: "Source for the bot: [Cyb3r-Jak3/go-discord-music](https://github.com/Cyb3r-Jak3/go-discord-music)\n",
+	})
+}

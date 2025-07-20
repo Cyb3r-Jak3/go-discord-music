@@ -157,6 +157,10 @@ var commands = []discord.ApplicationCommandCreate{
 		Name:        "debug",
 		Description: "Debug command to get information about the bot",
 	},
+	discord.SlashCommandCreate{
+		Name:        "source",
+		Description: "GitHub link to the source code of the bot",
+	},
 }
 
 func (b *Bot) registerCommands() {

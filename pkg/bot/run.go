@@ -41,6 +41,7 @@ func (b *Bot) Run() {
 		"disconnect":  b.disconnect,
 		"connect":     b.connect,
 		"debug":       b.debug,
+		"source":      b.source,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
