@@ -3,14 +3,17 @@ package main
 import (
 	"context"
 	"fmt"
-	"go-discord-music/pkg/bot"
-	"go-discord-music/pkg/version"
 	"net/mail"
 	"os"
 	"os/signal"
 	"sort"
+	"strings"
 	"syscall"
 
+	"go-discord-music/pkg/bot"
+	"go-discord-music/pkg/version"
+
+	"github.com/disgoorg/disgolink/v3/disgolink"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v3"
 )
@@ -19,7 +22,7 @@ func buildApp() *cli.Command {
 	versionString := version.String()
 	app := &cli.Command{
 		Name:    "go-discord-music",
-		Usage:   "A simple Discord music bot",
+		Usage:   "Simple Discord music bot",
 		Version: versionString,
 		Suggest: true,
 		Authors: []any{
@@ -39,12 +42,14 @@ func buildApp() *cli.Command {
 			&cli.StringFlag{
 				Name:    "lavalink_node",
 				Aliases: []string{"l"},
-				Usage:   "Lavalink node configuration in the format 'name:address:password'. Note that the address should include the protocol (http or https).",
+				Usage:   "Lavalink node configuration in the format 'name|address|password'. Note that the address should include the protocol (http or https).",
+				Sources: cli.EnvVars("LAVALINK_NODE"),
 			},
 			&cli.BoolFlag{
 				Name:    "lavalink_singleton",
 				Aliases: []string{"s"},
 				Usage:   "Use a singleton Lavalink node. This will use a predefined node configuration.",
+				Sources: cli.EnvVars("LAVALINK_SINGLETON"),
 			},
 		},
 		EnableShellCompletion: true,
@@ -65,7 +70,40 @@ func main() {
 func Run(_ context.Context, c *cli.Command) error {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
-	b, err := bot.NewBot(c.String("discord_token"), bot.WithLogger(logger))
+	botOptions := []bot.Option{
+		bot.WithLogger(logger),
+	}
+	nodeInfo := c.String("lavalink_node")
+	if nodeInfo != "" {
+		parts := strings.Split(nodeInfo, "|")
+		if len(parts) != 3 {
+			return fmt.Errorf("invalid lavalink node format, expected 'name|address|password'. If there is no password, use 'name|address|'")
+		}
+		secure := true //
+		if parts[1][:5] == "http:" {
+			secure = false
+		}
+		nodeConfig := disgolink.NodeConfig{
+			Name:     parts[0],
+			Address:  parts[1],
+			Password: parts[2],
+			Secure:   secure,
+		}
+
+		logger.Infof("Using custom Lavalink node: %s", nodeConfig.Name)
+		botOptions = append(botOptions, bot.WithLavaLinkNode(nodeConfig))
+	}
+	if c.Bool("lavalink_singleton") {
+		if nodeInfo != "" {
+			logger.Warnf("Lavalink node configuration detected as singleton node, ignoring --lavalink-singleton flag")
+
+		} else {
+			logger.Info("Using default singleton Lavalink node configuration")
+			botOptions = append(botOptions, bot.WithLavaLinkSingleton())
+		}
+
+	}
+	b, err := bot.NewBot(c.String("discord_token"), botOptions...)
 	if err != nil {
 		return fmt.Errorf("error creating bot: %w", err)
 	}
