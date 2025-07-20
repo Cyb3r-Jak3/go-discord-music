@@ -51,6 +51,13 @@ func buildApp() *cli.Command {
 				Usage:   "Use a singleton Lavalink node. This will use a predefined node configuration.",
 				Sources: cli.EnvVars("LAVALINK_SINGLETON"),
 			},
+			&cli.StringFlag{
+				Name:    "log_level",
+				Aliases: []string{"v"},
+				Usage:   "Set the log level (debug, info, warn, error, fatal, panic). Default is 'warn'.",
+				Value:   "warn",
+				Sources: cli.EnvVars("LOG_LEVEL"),
+			},
 		},
 		EnableShellCompletion: true,
 	}
@@ -69,6 +76,10 @@ func main() {
 
 func Run(_ context.Context, c *cli.Command) error {
 	logger := logrus.New()
+	err := SetLogLevel(logger, c.String("log_level"))
+	if err != nil {
+		return fmt.Errorf("error setting log level: %w", err)
+	}
 	logger.SetLevel(logrus.DebugLevel)
 	var botOptions []bot.Option
 	nodeInfo := c.String("lavalink_node")
@@ -117,5 +128,16 @@ func Run(_ context.Context, c *cli.Command) error {
 
 	// Perform any necessary cleanup here
 	b.Shutdown()
+	return nil
+}
+
+func SetLogLevel(logger *logrus.Logger, logLevel string) error {
+	level, err := logrus.ParseLevel(logLevel)
+	if err != nil {
+		return fmt.Errorf("invalid log level: %s, error: %w", logLevel, err)
+	}
+	logger.SetLevel(level)
+
+	logger.Debugf("Log Level set to %v", logger.Level)
 	return nil
 }
