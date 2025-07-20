@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"go-discord-music/pkg/version"
+	"log/slog"
 	"net/http"
 	"net/http/cookiejar"
 	"time"
@@ -30,19 +31,13 @@ type Bot struct {
 	VersionInfo string
 }
 
-func NewBot(Token string, opts ...Option) (*Bot, error) {
+func NewBot(Token string, logger *logrus.Logger, opts ...Option) (*Bot, error) {
 	b := &Bot{
 		Queues: &QueueManager{
 			queues: make(map[snowflake.ID]*Queue),
 		},
+		logger:      logger,
 		VersionInfo: version.String(),
-	}
-	err := b.parseOptions(opts...)
-	if err != nil {
-		return nil, fmt.Errorf("options parsing failed: %w", err)
-	}
-	if b.logger == nil {
-		b.logger = logrus.New()
 	}
 
 	// Cookie jar is needed as the default Lavalink node is proxied and uses sticky session
@@ -68,10 +63,28 @@ func NewBot(Token string, opts ...Option) (*Bot, error) {
 	)
 
 	if err != nil {
-		return nil, errors.Join(fmt.Errorf("error creating the bot"), err)
+		return nil, errors.Join(fmt.Errorf("error creating the bot client"), err)
 	}
 
 	b.Client = client
+
+	b.Lavalink = disgolink.New(b.Client.ApplicationID(),
+		disgolink.WithListenerFunc(b.onPlayerPause),
+		disgolink.WithListenerFunc(b.onPlayerResume),
+		disgolink.WithListenerFunc(b.onTrackStart),
+		disgolink.WithListenerFunc(b.onTrackEnd),
+		disgolink.WithListenerFunc(b.onTrackException),
+		disgolink.WithListenerFunc(b.onTrackStuck),
+		disgolink.WithListenerFunc(b.onWebSocketClosed),
+		disgolink.WithListenerFunc(b.onUnknownEvent),
+		disgolink.WithLogger(slog.New(NewLogrusAdapter(b.logger))),
+		disgolink.WithHTTPClient(b.HTTPClient),
+	)
+	err = b.parseOptions(opts...)
+	if err != nil {
+		return nil, fmt.Errorf("options parsing failed: %w", err)
+	}
+
 	return b, nil
 }
 
@@ -113,6 +126,7 @@ func (b *Bot) Shutdown() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	b.Client.Close(ctx)
+	b.logger.Debugf("Bot shutdown complete")
 }
 
 // parseOptions parses the supplied options functions and returns a configured

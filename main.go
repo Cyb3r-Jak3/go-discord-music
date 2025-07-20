@@ -70,9 +70,7 @@ func main() {
 func Run(_ context.Context, c *cli.Command) error {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
-	botOptions := []bot.Option{
-		bot.WithLogger(logger),
-	}
+	var botOptions []bot.Option
 	nodeInfo := c.String("lavalink_node")
 	if nodeInfo != "" {
 		parts := strings.Split(nodeInfo, "|")
@@ -83,9 +81,13 @@ func Run(_ context.Context, c *cli.Command) error {
 		if parts[1][:5] == "http:" {
 			secure = false
 		}
+		address := strings.TrimPrefix(parts[1], "http://")
+		address = strings.TrimPrefix(address, "https://")
+		logger.Debugf("Connecting to Lavalink node: Name:%s, Address: %s, Secure: %t", parts[0], address, secure)
+
 		nodeConfig := disgolink.NodeConfig{
 			Name:     parts[0],
-			Address:  parts[1],
+			Address:  address,
 			Password: parts[2],
 			Secure:   secure,
 		}
@@ -96,14 +98,12 @@ func Run(_ context.Context, c *cli.Command) error {
 	if c.Bool("lavalink_singleton") {
 		if nodeInfo != "" {
 			logger.Warnf("Lavalink node configuration detected as singleton node, ignoring --lavalink-singleton flag")
-
 		} else {
 			logger.Info("Using default singleton Lavalink node configuration")
 			botOptions = append(botOptions, bot.WithLavaLinkSingleton())
 		}
-
 	}
-	b, err := bot.NewBot(c.String("discord_token"), botOptions...)
+	b, err := bot.NewBot(c.String("discord_token"), logger, botOptions...)
 	if err != nil {
 		return fmt.Errorf("error creating bot: %w", err)
 	}

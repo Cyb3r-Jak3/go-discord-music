@@ -3,7 +3,6 @@ package bot
 import (
 	"context"
 	"go-discord-music/pkg/version"
-	"log/slog"
 	"time"
 
 	"github.com/disgoorg/disgo/discord"
@@ -15,18 +14,6 @@ func (b *Bot) Run() {
 	b.logger.Debugf("starting bot with version: %s", version.Version)
 	b.registerCommands()
 
-	b.Lavalink = disgolink.New(b.Client.ApplicationID(),
-		disgolink.WithListenerFunc(b.onPlayerPause),
-		disgolink.WithListenerFunc(b.onPlayerResume),
-		disgolink.WithListenerFunc(b.onTrackStart),
-		disgolink.WithListenerFunc(b.onTrackEnd),
-		disgolink.WithListenerFunc(b.onTrackException),
-		disgolink.WithListenerFunc(b.onTrackStuck),
-		disgolink.WithListenerFunc(b.onWebSocketClosed),
-		disgolink.WithListenerFunc(b.onUnknownEvent),
-		disgolink.WithLogger(slog.New(NewLogrusAdapter(b.logger))),
-		disgolink.WithHTTPClient(b.HTTPClient),
-	)
 	nodeCount := 0
 	b.Lavalink.ForNodes(func(_ disgolink.Node) { nodeCount++ })
 	if nodeCount == 0 {

@@ -5,12 +5,11 @@ import (
 	"fmt"
 
 	"github.com/disgoorg/disgolink/v3/disgolink"
-	"github.com/sirupsen/logrus"
 )
 
 var (
 	defaultLavalinkNode = disgolink.NodeConfig{
-		Name:     "cyberjake-default",
+		Name:     "cyberjake-lb",
 		Address:  "lavalink-4-lb.cyberjake.xyz",
 		Password: "FreeToUse",
 		Secure:   true,
@@ -25,16 +24,6 @@ var (
 
 // Option is a functional option for configuring the API client.
 type Option func(*Bot) error
-
-func WithLogger(logger *logrus.Logger) Option {
-	return func(b *Bot) error {
-		if logger == nil {
-			return fmt.Errorf("logger is required when using WithLogger option")
-		}
-		b.logger = logger
-		return nil
-	}
-}
 
 func WithLavaLinkNode(node disgolink.NodeConfig) Option {
 	return func(b *Bot) error {
