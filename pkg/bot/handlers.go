@@ -3,6 +3,8 @@ package bot
 import (
 	"context"
 	"fmt"
+	"github.com/disgoorg/snowflake/v2"
+	"net/url"
 	"regexp"
 	"time"
 
@@ -139,6 +141,18 @@ func (b *Bot) skip(event *events.ApplicationCommandInteractionCreate, data disco
 	}
 
 	track, ok := queue.Skip(amount)
+	currentTrack := player.Track()
+	if currentTrack != nil {
+		playerUpdateErr := player.Update(context.TODO(), lavalink.WithNullTrack())
+		if playerUpdateErr != nil {
+			return event.CreateMessage(discord.MessageCreate{
+				Content: fmt.Sprintf("Error while skipping current track: `%s`", playerUpdateErr),
+			})
+		}
+		return event.CreateMessage(discord.MessageCreate{
+			Content: fmt.Sprintf("Skipped `%d` track(s), current track was: [`%s`](<%s>)", amount, currentTrack.Info.Title, *currentTrack.Info.URI),
+		})
+	}
 	if !ok {
 		return event.CreateMessage(discord.MessageCreate{
 			Content: "No tracks in queue",
@@ -406,8 +420,33 @@ func (b *Bot) play(event *events.ApplicationCommandInteractionCreate, data disco
 }
 
 func (b *Bot) debug(event *events.ApplicationCommandInteractionCreate, _ discord.SlashCommandInteractionData) error {
+	if event.User().ID != snowflake.ID(256198136106582026) {
+		return event.CreateMessage(discord.MessageCreate{
+			Content: "You are not allowed to use this command",
+		})
+	}
+	cookieString := ""
+	nodeString := ""
+	b.Lavalink.ForNodes(func(node disgolink.Node) {
+		nodeConfig := node.Config()
+		nodeHost, err := url.Parse(nodeConfig.Address)
+		if err != nil {
+			b.logger.Errorf("error parsing node address: %v", err)
+			return
+		}
+		nodeString += fmt.Sprintf("Node: `%s` Address: `%s` Secure: `%t` Password: `%s`\n", nodeConfig.Name, nodeConfig.Address, nodeConfig.Secure, nodeConfig.Password)
+		cookies := b.HTTPClient.Jar.Cookies(nodeHost)
+		if len(cookies) == 0 {
+			cookieString += fmt.Sprintf("Node: `%s` has no cookies\n", nodeConfig.Name)
+			return
+		}
+		for _, cookie := range cookies {
+			cookieString += fmt.Sprintf("Node: `%s` Cookie: `%s` Value: `%s`\n", nodeConfig.Name, cookie.Name, cookie.Value)
+		}
+	})
+
 	return event.CreateMessage(discord.MessageCreate{
-		Content: "Command not implemented yet",
+		Content: fmt.Sprintf("# Debug information:\n## Nodes:\n%s\n## HTTP Client Cookies:\n%s", nodeString, cookieString),
 	})
 }
 

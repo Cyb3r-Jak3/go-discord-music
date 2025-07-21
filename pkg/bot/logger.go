@@ -22,6 +22,7 @@ func (a *LogrusAdapter) Handle(_ context.Context, r slog.Record) error {
 		attrs[attr.Key] = attr.Value
 		return true
 	})
+	attrs["service"] = "disgolink"
 	entry := a.logger.WithFields(attrs)
 	switch r.Level {
 	case slog.LevelDebug:

@@ -76,7 +76,7 @@ func main() {
 
 func Run(_ context.Context, c *cli.Command) error {
 	logger := logrus.New()
-	err := SetLogLevel(logger, c.String("log_level"))
+	err := SetLogLevel(logger, strings.ToUpper(c.String("log_level")))
 	if err != nil {
 		return fmt.Errorf("error setting log level: %w", err)
 	}
