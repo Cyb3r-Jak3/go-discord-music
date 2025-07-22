@@ -12,7 +12,6 @@ import (
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/disgolink/v3/disgolink"
 	"github.com/disgoorg/disgolink/v3/lavalink"
-	"github.com/disgoorg/snowflake/v2"
 )
 
 var bassBoost = &lavalink.Equalizer{
@@ -426,7 +425,14 @@ func (b *Bot) play(event *events.ApplicationCommandInteractionCreate, data disco
 }
 
 func (b *Bot) debug(event *events.ApplicationCommandInteractionCreate, _ discord.SlashCommandInteractionData) error {
-	if event.User().ID != snowflake.ID(256198136106582026) {
+	selfInfo, err := b.Client.Rest().GetCurrentApplication()
+	if err != nil {
+		return event.CreateMessage(discord.MessageCreate{
+			Content: fmt.Sprintf("Error fetching application info: `%s`", err),
+		})
+	}
+
+	if event.User().ID != selfInfo.Owner.ID {
 		return event.CreateMessage(discord.MessageCreate{
 			Content: "You are not allowed to use this command",
 		})
