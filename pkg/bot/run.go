@@ -2,7 +2,6 @@ package bot
 
 import (
 	"context"
-	"go-discord-music/pkg/version"
 	"time"
 
 	"github.com/disgoorg/disgo/discord"
@@ -11,7 +10,6 @@ import (
 )
 
 func (b *Bot) Run() {
-	b.logger.Debugf("starting bot with version: %s", version.Version)
 	b.registerCommands()
 
 	nodeCount := 0
@@ -19,6 +17,7 @@ func (b *Bot) Run() {
 	if nodeCount == 0 {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
+		b.logger.Debugf("No Lavalink nodes found, adding default node: %s", defaultLavalinkNode.Name)
 		_, addNodeErr := b.Lavalink.AddNode(ctx, defaultLavalinkNode)
 		if addNodeErr != nil {
 			b.logger.Fatalf("error adding default lavalink node: %v", addNodeErr)

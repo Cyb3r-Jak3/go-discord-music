@@ -3,18 +3,16 @@ package bot
 import (
 	"context"
 	"fmt"
-	"github.com/disgoorg/snowflake/v2"
 	"net/url"
 	"regexp"
 	"time"
 
 	"github.com/Cyb3r-Jak3/common/v5"
-
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
-
 	"github.com/disgoorg/disgolink/v3/disgolink"
 	"github.com/disgoorg/disgolink/v3/lavalink"
+	"github.com/disgoorg/snowflake/v2"
 )
 
 var bassBoost = &lavalink.Equalizer{
@@ -416,7 +414,15 @@ func (b *Bot) play(event *events.ApplicationCommandInteractionCreate, data disco
 	}
 	b.logger.Infof("Found track: %s", toPlay.Info.Title)
 
-	return b.Lavalink.Player(*event.GuildID()).Update(context.TODO(), lavalink.WithTrack(*toPlay))
+	playErr := b.Lavalink.Player(*event.GuildID()).Update(context.TODO(), lavalink.WithTrack(*toPlay))
+	if playErr != nil {
+		_, _ = b.Client.Rest().UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
+			Content: common.Ptr(fmt.Sprintf("Error while playing track: `%s`", playErr)),
+		})
+		return playErr
+	}
+
+	return playErr
 }
 
 func (b *Bot) debug(event *events.ApplicationCommandInteractionCreate, _ discord.SlashCommandInteractionData) error {
@@ -434,10 +440,17 @@ func (b *Bot) debug(event *events.ApplicationCommandInteractionCreate, _ discord
 			b.logger.Errorf("error parsing node address: %v", err)
 			return
 		}
-		nodeString += fmt.Sprintf("Node: `%s` Address: `%s` Secure: `%t` Password: `%s`\n", nodeConfig.Name, nodeConfig.Address, nodeConfig.Secure, nodeConfig.Password)
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		nodeVersion, err := node.Version(ctx)
+		cancel()
+		if err != nil {
+			b.logger.Errorf("error getting node version: %v", err)
+			nodeVersion = "error"
+		}
+		nodeString += fmt.Sprintf("Node: `%s` Address: `%s` Secure: `%t` Version: %s\n", nodeConfig.Name, nodeConfig.Address, nodeConfig.Secure, nodeVersion)
 		cookies := b.HTTPClient.Jar.Cookies(nodeHost)
 		if len(cookies) == 0 {
-			cookieString += fmt.Sprintf("Node: `%s` has no cookies\n", nodeConfig.Name)
+			cookieString += fmt.Sprintf("Node: `%s` (%s) has no cookies\n", nodeConfig.Name, nodeHost)
 			return
 		}
 		for _, cookie := range cookies {
