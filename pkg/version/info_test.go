@@ -13,7 +13,7 @@ func Test_VersionString(t *testing.T) {
 
 	goVersion := runtime.Version()
 
-	expected := fmt.Sprintf("v1.0.0 (built 2023-01-01 with %s)", goVersion)
+	expected := fmt.Sprintf("v1.0.0 (Commit abc123) (built 2023-01-01 with %s)", goVersion)
 	result := String()
 
 	if result != expected {
