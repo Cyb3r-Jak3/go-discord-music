@@ -48,4 +48,5 @@ func (b *Bot) Run() {
 	if err := b.Client.OpenGateway(ctx); err != nil {
 		b.logger.Fatalf("error opening discord gateway: %v", err)
 	}
+	go b.IdleTimeoutCleaner()
 }
