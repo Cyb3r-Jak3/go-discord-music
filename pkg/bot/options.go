@@ -46,3 +46,10 @@ func WithLavaLinkDefault() Option {
 		return err
 	}
 }
+
+func WithIdleTimeout(timout time.Duration) Option {
+	return func(b *Bot) error {
+		b.IdleTimeout = timout
+		return nil
+	}
+}

@@ -29,6 +29,9 @@ type Bot struct {
 	HTTPClient  *http.Client
 	logger      *logrus.Logger
 	VersionInfo string
+	IdleTimeout time.Duration
+	idleTimes   map[snowflake.ID]time.Time
+	shutdown    chan struct{}
 }
 
 func NewBot(Token string, logger *logrus.Logger, opts ...Option) (*Bot, error) {
@@ -38,6 +41,8 @@ func NewBot(Token string, logger *logrus.Logger, opts ...Option) (*Bot, error) {
 		},
 		logger:      logger,
 		VersionInfo: version.String(),
+		idleTimes:   make(map[snowflake.ID]time.Time),
+		shutdown:    make(chan struct{}),
 	}
 
 	// Cookie jar is needed as the default Lavalink node is proxied and uses sticky session
@@ -120,6 +125,7 @@ func (b *Bot) Shutdown() {
 	for _, queue := range b.Queues.queues {
 		queue.Clear()
 	}
+	close(b.shutdown)
 	b.logger.Debugf("queues cleared")
 	b.Lavalink.Close()
 	b.logger.Debugf("lavalink connection closed")
@@ -143,4 +149,44 @@ func (b *Bot) parseOptions(opts ...Option) error {
 	}
 
 	return nil
+}
+
+func (b *Bot) IdleTimeoutCleaner() {
+	b.logger.Infof("starting idle timeout cleaner with interval %s", b.IdleTimeout)
+	ticker := time.NewTicker(b.IdleTimeout / 10) // Check every 10% of the idle timeout duration
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			now := time.Now()
+			for guildID, idleTime := range b.idleTimes {
+				if now.Sub(idleTime) >= b.IdleTimeout {
+					b.logger.Infof("removing idle timeout for guild %s", guildID)
+					delete(b.idleTimes, guildID)
+					err := b.Client.UpdateVoiceState(context.Background(), guildID, nil, false, false)
+					if err != nil {
+						b.logger.Errorf("error updating voice state for guild %s: %v", guildID, err)
+					} else {
+						b.logger.Infof("disconnected from voice channel for guild %s due to idle timeout", guildID)
+					}
+				}
+			}
+		case <-b.shutdown:
+			b.logger.Infof("idle timeout cleaner shutting down")
+
+			ticker.Stop()
+			for guildID := range b.idleTimes {
+				b.logger.Infof("removing remaining idle timeout for guild %s", guildID)
+				delete(b.idleTimes, guildID)
+				err := b.Client.UpdateVoiceState(context.TODO(), guildID, nil, false, false)
+				if err != nil {
+					b.logger.Errorf("error updating voice state for guild %s: %v", guildID, err)
+				} else {
+					b.logger.Infof("disconnected from voice channel for guild %s due to shutdown", guildID)
+				}
+			}
+			return
+		}
+	}
 }

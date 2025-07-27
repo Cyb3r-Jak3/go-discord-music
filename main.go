@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"syscall"
+	"time"
 
 	"go-discord-music/pkg/bot"
 	"go-discord-music/pkg/version"
@@ -57,6 +58,12 @@ func buildApp() *cli.Command {
 				Value:   "warn",
 				Sources: cli.EnvVars("LOG_LEVEL"),
 			},
+			&cli.DurationFlag{
+				Name: "idle_timeout",
+				Usage: "Time after which the bot will disconnect from voice channels if no activity is detected. " +
+					"Set to 0 to disable idle timeout. Default is 5 minutes.",
+				Value: 5 * time.Minute,
+			},
 		},
 		EnableShellCompletion: true,
 	}
@@ -81,7 +88,9 @@ func Run(_ context.Context, c *cli.Command) error {
 		return fmt.Errorf("error setting log level: %w", err)
 	}
 	logger.Infof("Starting go-discord-music bot version %s", version.Version)
-	var botOptions []bot.Option
+	botOptions := []bot.Option{
+		bot.WithIdleTimeout(c.Duration("idle_timeout")),
+	}
 	nodeInfo := c.String(lavalinkNodeFlagName)
 	if nodeInfo != "" {
 		nodeConfig, nodeConfigErr := LavaLinkNodeString(nodeInfo)

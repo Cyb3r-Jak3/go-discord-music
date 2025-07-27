@@ -146,6 +146,12 @@ func (b *Bot) skip(event *events.ApplicationCommandInteractionCreate, data disco
 				Content: fmt.Sprintf("Error while skipping current track: `%s`", playerUpdateErr),
 			})
 		}
+		if !ok {
+			b.idleTimes[*event.GuildID()] = time.Now()
+			return event.CreateMessage(discord.MessageCreate{
+				Content: fmt.Sprintf("Skipped `%d` track(s), but no next track available, current track was: [`%s`](<%s>)", amount, currentTrack.Info.Title, *currentTrack.Info.URI),
+			})
+		}
 		return event.CreateMessage(discord.MessageCreate{
 			Content: fmt.Sprintf("Skipped `%d` track(s), current track was: [`%s`](<%s>)", amount, currentTrack.Info.Title, *currentTrack.Info.URI),
 		})
@@ -318,6 +324,7 @@ func (b *Bot) disconnect(event *events.ApplicationCommandInteractionCreate, _ di
 			Content: fmt.Sprintf("Error while disconnecting: `%s`", err),
 		})
 	}
+	delete(b.idleTimes, *event.GuildID())
 
 	return event.CreateMessage(discord.MessageCreate{
 		Content: "Player disconnected",
@@ -437,20 +444,29 @@ func (b *Bot) debug(event *events.ApplicationCommandInteractionCreate, _ discord
 			Content: "You are not allowed to use this command",
 		})
 	}
+
+	var gatewayPing string
+	if event.Client().HasGateway() {
+		gatewayPing = event.Client().Gateway().Latency().String()
+	}
+	eb := discord.NewEmbedBuilder().
+		SetTitle("Debug Info").
+		AddField("Gateway", gatewayPing, false)
+
 	cookieString := ""
 	nodeString := ""
 	b.Lavalink.ForNodes(func(node disgolink.Node) {
 		nodeConfig := node.Config()
-		nodeHost, err := url.Parse(nodeConfig.Address)
-		if err != nil {
-			b.logger.Errorf("error parsing node address: %v", err)
+		nodeHost, parseErr := url.Parse(nodeConfig.Address)
+		if parseErr != nil {
+			b.logger.Errorf("error parsing node address: %v", parseErr)
 			return
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		nodeVersion, err := node.Version(ctx)
+		nodeVersion, nodeErr := node.Version(ctx)
 		cancel()
-		if err != nil {
-			b.logger.Errorf("error getting node version: %v", err)
+		if nodeErr != nil {
+			b.logger.Errorf("error getting node version: %v", nodeErr)
 			nodeVersion = "error"
 		}
 		nodeString += fmt.Sprintf("Node: `%s` Address: `%s` Secure: `%t` Version: %s\n", nodeConfig.Name, nodeConfig.Address, nodeConfig.Secure, nodeVersion)
@@ -463,10 +479,31 @@ func (b *Bot) debug(event *events.ApplicationCommandInteractionCreate, _ discord
 			cookieString += fmt.Sprintf("Node: `%s` Cookie: `%s` Value: `%s`\n", nodeConfig.Name, cookie.Name, cookie.Value)
 		}
 	})
-
-	return event.CreateMessage(discord.MessageCreate{
-		Content: fmt.Sprintf("# Debug information:\n## Nodes:\n%s\n## HTTP Client Cookies:\n%s", nodeString, cookieString),
-	})
+	timerString := ""
+	for guild, timer := range b.idleTimes {
+		if time.Since(timer) > b.IdleTimeout {
+			disconnectErr := b.Client.UpdateVoiceState(context.TODO(), guild, nil, false, false)
+			if disconnectErr != nil {
+				b.logger.Errorf("error updating voice state for guild %s: %v", guild, disconnectErr)
+			}
+			delete(b.idleTimes, guild)
+			b.logger.Infof("Guild `%s` has been idle for more than %s, disconnected\n", guild, b.IdleTimeout)
+		} else {
+			b.logger.Infof("idle timeout for guild %s, %d", guild, timer.Unix())
+			timerString += fmt.Sprintf("Guild `%s`: idle time remaining: %s\n", guild, b.IdleTimeout-time.Since(timer).Round(time.Second))
+		}
+	}
+	if timerString == "" {
+		timerString = "No guilds are idle"
+	}
+	eb.AddField("Idle Times", timerString, false)
+	eb.AddField("Nodes", nodeString, false)
+	eb.AddField("HTTP Client Cookies", cookieString, false)
+	eb.Timestamp = common.Ptr(time.Now())
+	return event.Respond(discord.InteractionResponseTypeCreateMessage, discord.NewMessageCreateBuilder().
+		SetEmbeds(eb.Build()).
+		Build(),
+	)
 }
 
 func (b *Bot) source(event *events.ApplicationCommandInteractionCreate, _ discord.SlashCommandInteractionData) error {

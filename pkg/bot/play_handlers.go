@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"time"
 
 	"github.com/disgoorg/disgolink/v3/disgolink"
 	"github.com/disgoorg/disgolink/v3/lavalink"
@@ -17,6 +18,10 @@ func (b *Bot) onPlayerResume(_ disgolink.Player, event lavalink.PlayerResumeEven
 
 func (b *Bot) onTrackStart(_ disgolink.Player, event lavalink.TrackStartEvent) {
 	b.logger.Infof("track started, guild: %s, track: %#v", event.GuildID(), event.Track)
+	if !b.idleTimes[event.GuildID()].IsZero() {
+		b.logger.Infof("resetting idle timeout for guild %s", event.GuildID())
+		delete(b.idleTimes, event.GuildID())
+	}
 }
 
 func (b *Bot) onTrackEnd(player disgolink.Player, event lavalink.TrackEndEvent) {
@@ -42,6 +47,8 @@ func (b *Bot) onTrackEnd(player disgolink.Player, event lavalink.TrackEndEvent) 
 	}
 
 	if !ok {
+		b.idleTimes[event.GuildID()] = time.Now().Add(b.IdleTimeout)
+		b.logger.Infof("no next track available, setting idle timeout for guild %s to %d seconds", event.GuildID(), b.IdleTimeout)
 		return
 	}
 	if err := player.Update(context.TODO(), lavalink.WithTrack(nextTrack)); err != nil {
