@@ -9,7 +9,7 @@ require (
 	github.com/disgoorg/snowflake/v2 v2.0.3
 	github.com/sirupsen/logrus v1.10.2
 	github.com/stretchr/testify v1.12.1
-	github.com/urfave/cli/v3 v3.3.8
+	github.com/urfave/cli/v3 v3.14.0
 )
 
 require (
