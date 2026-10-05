@@ -3,7 +3,7 @@ module go-discord-music
 go 1.24
 
 require (
-	github.com/Cyb3r-Jak3/common/v5 v5.5.0
+	github.com/Cyb3r-Jak3/common/v5 v5.7.0
 	github.com/disgoorg/disgo v0.18.16
 	github.com/disgoorg/disgolink/v3 v3.1.0
 	github.com/disgoorg/snowflake/v2 v2.0.3
