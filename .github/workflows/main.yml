@@ -102,19 +102,23 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload assets
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: ${{ github.event.repository.name }}-snapshot
-          path: dist/*
-
-      - name: Upload to S3
+      - name: Upload to R2
         run: |
-          aws s3 cp dist/ s3://github-actions-artifacts/snapshots/${{ github.event.repository.name }}/${{ github.sha }} --recursive
+          aws s3 cp dist/ s3://github-actions-artifacts/snapshots/${{github.event.repository.name}}/${{ github.sha }} --recursive --checksum-algorithm CRC32
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.ARTIFACTS_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.ARTIFACTS_AWS_SECRET_ACCESS_KEY }}
           AWS_ENDPOINT_URL_S3: https://8be772befd147a8df540aae0fa15c047.r2.cloudflarestorage.com
+
+      - name: Add step summary with artifact link
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        env:
+          ARTIFACT_URL: ${{ vars.ARTIFACT_PUBLIC_DOMAIN }}
+        with:
+          script: |
+            const artifactUrl = process.env.ARTIFACT_URL + '${{github.event.repository.name}}/' + context.sha + '/';
+            const summaryBody = `Snapshot release for commit ${context.sha} is available.`;
+            core.summary.addHeading('Snapshot Release').addRaw(summaryBody).addBreak().addLink('Download Artifacts', artifactUrl).write();  
 
 
   Release:
