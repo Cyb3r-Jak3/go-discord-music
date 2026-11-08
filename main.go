@@ -80,7 +80,7 @@ func main() {
 	}
 }
 
-func Run(_ context.Context, c *cli.Command) error {
+func Run(ctx context.Context, c *cli.Command) error {
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.JSONFormatter{})
 	err := SetLogLevel(logger, c.String("log_level"))
@@ -90,6 +90,7 @@ func Run(_ context.Context, c *cli.Command) error {
 	logger.Infof("Starting go-discord-music bot version %s", version.Version)
 	botOptions := []bot.Option{
 		bot.WithIdleTimeout(c.Duration("idle_timeout")),
+		bot.WithContext(ctx),
 	}
 	nodeInfo := c.String(lavalinkNodeFlagName)
 	if nodeInfo != "" {

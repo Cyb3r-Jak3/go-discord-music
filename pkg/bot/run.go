@@ -15,7 +15,7 @@ func (b *Bot) Run() {
 	nodeCount := 0
 	b.Lavalink.ForNodes(func(_ disgolink.Node) { nodeCount++ })
 	if nodeCount == 0 {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(b.ctx, 10*time.Second)
 		defer cancel()
 		b.logger.Debugf("No Lavalink nodes found, adding default node: %s", defaultLavalinkNode.Name)
 		_, addNodeErr := b.Lavalink.AddNode(ctx, defaultLavalinkNode)
@@ -43,7 +43,7 @@ func (b *Bot) Run() {
 		"source":      b.source,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(b.ctx, 10*time.Second)
 	defer cancel()
 	if err := b.Client.OpenGateway(ctx); err != nil {
 		b.logger.Fatalf("error opening discord gateway: %v", err)

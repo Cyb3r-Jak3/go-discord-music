@@ -22,7 +22,8 @@ import (
 )
 
 type Bot struct {
-	Client      bot.Client
+	ctx         context.Context
+	Client      *bot.Client
 	Lavalink    disgolink.Client
 	Handlers    map[string]func(event *events.ApplicationCommandInteractionCreate, data discord.SlashCommandInteractionData) error
 	Queues      *QueueManager
@@ -73,7 +74,7 @@ func NewBot(Token string, logger *logrus.Logger, opts ...Option) (*Bot, error) {
 
 	b.Client = client
 
-	b.Lavalink = disgolink.New(b.Client.ApplicationID(),
+	b.Lavalink = disgolink.New(b.Client.ApplicationID,
 		disgolink.WithListenerFunc(b.onPlayerPause),
 		disgolink.WithListenerFunc(b.onPlayerResume),
 		disgolink.WithListenerFunc(b.onTrackStart),
@@ -107,7 +108,7 @@ func (b *Bot) onApplicationCommand(event *events.ApplicationCommandInteractionCr
 }
 
 func (b *Bot) onVoiceStateUpdate(event *events.GuildVoiceStateUpdate) {
-	if event.VoiceState.UserID != b.Client.ApplicationID() {
+	if event.VoiceState.UserID != b.Client.ApplicationID {
 		return
 	}
 	b.Lavalink.OnVoiceStateUpdate(context.TODO(), event.VoiceState.GuildID, event.VoiceState.ChannelID, event.VoiceState.SessionID)
@@ -129,7 +130,7 @@ func (b *Bot) Shutdown() {
 	b.logger.Debugf("queues cleared")
 	b.Lavalink.Close()
 	b.logger.Debugf("lavalink connection closed")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(b.ctx, 5*time.Second)
 	defer cancel()
 	b.Client.Close(ctx)
 	b.logger.Debugf("Bot shutdown complete")

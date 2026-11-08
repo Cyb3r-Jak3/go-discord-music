@@ -47,9 +47,15 @@ func WithLavaLinkDefault() Option {
 	}
 }
 
-func WithIdleTimeout(timout time.Duration) Option {
+func WithIdleTimeout(timeout time.Duration) Option {
 	return func(b *Bot) error {
-		b.IdleTimeout = timout
+		b.IdleTimeout = timeout
+		return nil
+	}
+}
+func WithContext(ctx context.Context) Option {
+	return func(b *Bot) error {
+		b.ctx = ctx
 		return nil
 	}
 }

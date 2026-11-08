@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/Cyb3r-Jak3/common/v5"
@@ -293,7 +294,7 @@ func (b *Bot) connect(event *events.ApplicationCommandInteractionCreate, _ disco
 			Content: "Player already connected",
 		})
 	}
-	voiceState, ok := b.Client.Caches().VoiceState(*event.GuildID(), event.User().ID)
+	voiceState, ok := b.Client.Caches.VoiceState(*event.GuildID(), event.User().ID)
 	if !ok {
 		return event.CreateMessage(discord.MessageCreate{
 			Content: "You need to be in a voice channel to use this command",
@@ -366,7 +367,7 @@ func (b *Bot) play(event *events.ApplicationCommandInteractionCreate, data disco
 		identifier = lavalink.SearchTypeYouTube.Apply(identifier)
 	}
 
-	voiceState, ok := b.Client.Caches().VoiceState(*event.GuildID(), event.User().ID)
+	voiceState, ok := b.Client.Caches.VoiceState(*event.GuildID(), event.User().ID)
 	if !ok {
 		return event.CreateMessage(discord.MessageCreate{
 			Content: "You need to be in a voice channel to use this command",
@@ -383,30 +384,30 @@ func (b *Bot) play(event *events.ApplicationCommandInteractionCreate, data disco
 	var toPlay *lavalink.Track
 	b.Lavalink.BestNode().LoadTracksHandler(ctx, identifier, disgolink.NewResultHandler(
 		func(track lavalink.Track) {
-			_, _ = b.Client.Rest().UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
+			_, _ = b.Client.Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
 				Content: common.Ptr(fmt.Sprintf("Loaded track: [`%s`](<%s>)", track.Info.Title, *track.Info.URI)),
 			})
 			toPlay = &track
 		},
 		func(playlist lavalink.Playlist) {
-			_, _ = b.Client.Rest().UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
+			_, _ = b.Client.Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
 				Content: common.Ptr(fmt.Sprintf("Loaded playlist: `%s` with `%d` tracks", playlist.Info.Name, len(playlist.Tracks))),
 			})
 			toPlay = &playlist.Tracks[0]
 		},
 		func(tracks []lavalink.Track) {
-			_, _ = b.Client.Rest().UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
+			_, _ = b.Client.Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
 				Content: common.Ptr(fmt.Sprintf("Loaded search result: [`%s`](<%s>)", tracks[0].Info.Title, *tracks[0].Info.URI)),
 			})
 			toPlay = &tracks[0]
 		},
 		func() {
-			_, _ = b.Client.Rest().UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
+			_, _ = b.Client.Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
 				Content: common.Ptr(fmt.Sprintf("Nothing found for: `%s`", identifier)),
 			})
 		},
 		func(err error) {
-			_, _ = b.Client.Rest().UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
+			_, _ = b.Client.Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
 				Content: common.Ptr(fmt.Sprintf("Error while looking up query: `%s`", err)),
 			})
 		},
@@ -422,7 +423,7 @@ func (b *Bot) play(event *events.ApplicationCommandInteractionCreate, data disco
 
 	playErr := b.Lavalink.Player(*event.GuildID()).Update(context.TODO(), lavalink.WithTrack(*toPlay))
 	if playErr != nil {
-		_, _ = b.Client.Rest().UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
+		_, _ = b.Client.Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
 			Content: common.Ptr(fmt.Sprintf("Error while playing track: `%s`", playErr)),
 		})
 		return playErr
@@ -432,7 +433,7 @@ func (b *Bot) play(event *events.ApplicationCommandInteractionCreate, data disco
 }
 
 func (b *Bot) debug(event *events.ApplicationCommandInteractionCreate, _ discord.SlashCommandInteractionData) error {
-	selfInfo, err := b.Client.Rest().GetCurrentApplication()
+	selfInfo, err := b.Client.Rest.GetCurrentApplication()
 	if err != nil {
 		return event.CreateMessage(discord.MessageCreate{
 			Content: fmt.Sprintf("Error fetching application info: `%s`", err),
@@ -447,13 +448,13 @@ func (b *Bot) debug(event *events.ApplicationCommandInteractionCreate, _ discord
 
 	var gatewayPing string
 	if event.Client().HasGateway() {
-		gatewayPing = event.Client().Gateway().Latency().String()
+		gatewayPing = event.Client().Gateway.Latency().String()
 	}
-	eb := discord.NewEmbedBuilder().
-		SetTitle("Debug Info").
+	eb := discord.NewEmbed().
+		WithTitle("Debug Info").
 		AddField("Gateway", gatewayPing, false)
 
-	cookieString := ""
+	var cookieString strings.Builder
 	nodeString := ""
 	b.Lavalink.ForNodes(func(node disgolink.Node) {
 		nodeConfig := node.Config()
@@ -472,11 +473,11 @@ func (b *Bot) debug(event *events.ApplicationCommandInteractionCreate, _ discord
 		nodeString += fmt.Sprintf("Node: `%s` Address: `%s` Secure: `%t` Version: %s\n", nodeConfig.Name, nodeConfig.Address, nodeConfig.Secure, nodeVersion)
 		cookies := b.HTTPClient.Jar.Cookies(nodeHost)
 		if len(cookies) == 0 {
-			cookieString += fmt.Sprintf("Node: `%s` (%s) has no cookies\n", nodeConfig.Name, nodeHost)
+			cookieString.WriteString(fmt.Sprintf("Node: `%s` (%s) has no cookies\n", nodeConfig.Name, nodeHost))
 			return
 		}
 		for _, cookie := range cookies {
-			cookieString += fmt.Sprintf("Node: `%s` Cookie: `%s` Value: `%s`\n", nodeConfig.Name, cookie.Name, cookie.Value)
+			cookieString.WriteString(fmt.Sprintf("Node: `%s` Cookie: `%s` Value: `%s`\n", nodeConfig.Name, cookie.Name, cookie.Value))
 		}
 	})
 	timerString := ""
@@ -498,11 +499,10 @@ func (b *Bot) debug(event *events.ApplicationCommandInteractionCreate, _ discord
 	}
 	eb.AddField("Idle Times", timerString, false)
 	eb.AddField("Nodes", nodeString, false)
-	eb.AddField("HTTP Client Cookies", cookieString, false)
+	eb.AddField("HTTP Client Cookies", cookieString.String(), false)
 	eb.Timestamp = common.Ptr(time.Now())
-	return event.Respond(discord.InteractionResponseTypeCreateMessage, discord.NewMessageCreateBuilder().
-		SetEmbeds(eb.Build()).
-		Build(),
+	return event.Respond(discord.InteractionResponseTypeCreateMessage, discord.NewMessageCreate().
+		WithEmbeds(eb),
 	)
 }
 
