@@ -473,11 +473,19 @@ func (b *Bot) debug(event *events.ApplicationCommandInteractionCreate, _ discord
 		nodeString += fmt.Sprintf("Node: `%s` Address: `%s` Secure: `%t` Version: %s\n", nodeConfig.Name, nodeConfig.Address, nodeConfig.Secure, nodeVersion)
 		cookies := b.HTTPClient.Jar.Cookies(nodeHost)
 		if len(cookies) == 0 {
-			cookieString.WriteString(fmt.Sprintf("Node: `%s` (%s) has no cookies\n", nodeConfig.Name, nodeHost))
+			_, fprintErr := fmt.Fprintf(&cookieString, "Node: `%s` (%s) has no cookies\n", nodeConfig.Name, nodeHost)
+			if fprintErr != nil {
+				b.logger.WithError(fprintErr).Errorf("error getting cookies")
+				return
+			}
 			return
 		}
 		for _, cookie := range cookies {
-			cookieString.WriteString(fmt.Sprintf("Node: `%s` Cookie: `%s` Value: `%s`\n", nodeConfig.Name, cookie.Name, cookie.Value))
+			_, fprintErr := fmt.Fprintf(&cookieString, "Node: `%s` Cookie: `%s` Value: `%s`\n", nodeConfig.Name, cookie.Name, cookie.Value)
+			if fprintErr != nil {
+				b.logger.WithError(fprintErr).Errorf("error writing cookies")
+				return
+			}
 		}
 	})
 	timerString := ""
