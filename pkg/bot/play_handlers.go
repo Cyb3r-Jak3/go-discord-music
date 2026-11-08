@@ -1,7 +1,6 @@
 package bot
 
 import (
-	"context"
 	"time"
 
 	"github.com/disgoorg/disgolink/v3/disgolink"
@@ -51,7 +50,7 @@ func (b *Bot) onTrackEnd(player disgolink.Player, event lavalink.TrackEndEvent) 
 		b.logger.Infof("no next track available, setting idle timeout for guild %s to %d seconds", event.GuildID(), b.IdleTimeout)
 		return
 	}
-	if err := player.Update(context.TODO(), lavalink.WithTrack(nextTrack)); err != nil {
+	if err := player.Update(b.ctx, lavalink.WithTrack(nextTrack)); err != nil {
 		b.logger.Errorf("error updating player track: %v", err)
 	}
 }

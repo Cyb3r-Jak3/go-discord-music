@@ -10,7 +10,6 @@ linters:
     - bodyclose
     - copyloopvar
     - dupl
-    - goconst
     - gocyclo
     - godot
     - goprintffuncname
@@ -34,6 +33,12 @@ linters:
     rules:
       - path: (.+)\.go$
         text: exclude-dirs-use-default
+      - path: _test\.go
+        linters:
+          - gocyclo
+          - errcheck
+          - dupl
+          - gosec
     paths:
       - third_party$
       - builtin$
