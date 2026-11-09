@@ -24,7 +24,7 @@ permissions:
   security-events: write
   actions: write
   packages: write
-  contents: read
+  contents: write
   id-token: write
   attestations: write
 
@@ -55,7 +55,6 @@ jobs:
 
       - name: Install gotestsum
         run: go install gotest.tools/gotestsum@${{ env.GOTESTSUM_VERSION }}
-
 
       - name: Test
         run: gotestsum --format testname --junitfile junit.xml -- -coverprofile=cover.out ./...

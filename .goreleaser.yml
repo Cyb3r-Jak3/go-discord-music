@@ -76,6 +76,8 @@ sboms:
 
 release:
   draft: true
+  preflight:
+    fail_on_error: true
   footer: >-
     ---
 
